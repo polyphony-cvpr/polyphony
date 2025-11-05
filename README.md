@@ -8,7 +8,11 @@
 
 ## Overview
 
-Polyphony is a unified three-stage framework for dual-hand action segmentation that addresses the unique challenges of modeling bimanual activities: complex inter-hand dependencies, visual asymmetry, representation conflicts, and semantic ambiguity.
+Polyphony is a unified three-stage method for dual-hand action segmentation that addresses the unique challenges of dual-hand action segmentation: complex inter-hand dependencies, visual asymmetry, representation conflicts, and semantic ambiguity.
+
+![Polyphony Framework Overview](asset/Overall_framework.png)
+<p align="center"><i>Figure 1: Overview of Polyphony, a three-stage dual-hand action segmentation method. Stage 1 extracts dual-hand features via a shared ViT and hand-specific classification heads; Stage 2 performs semantic feature conditioning by aligning visual features with compositional action descriptions; Stage 3 conducts diffusion-based segmentation with cross-hand feature fusion. The modular architecture enables: (1) flexible deployment—handles both dual-hand and single-stream tasks with potential extension to multi-agent scenarios; (2) versatile application—the ViT in Stage 1 can operates as a standalone action recognition model; (3) modular design—each component can be improved independently.</i></p>
+
 
 **Key Features:**
 - 🎯 **Unified Model**: Single model with shared backbone outperforms separate per-hand models
