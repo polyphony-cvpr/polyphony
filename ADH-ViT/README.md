@@ -1,6 +1,6 @@
 # ADH-ViT: Alternating Dual-Hand Vision Transformer
 
-**A clean, minimal implementation for alternating dual-hand video action recognition.**
+**An implementation for alternating dual-hand video action recognition.**
 
 This is a streamlined version of VideoMAEv2, containing only the essential components needed for training alternating dual-hand action recognition models on the HA-ViD dataset.
 
@@ -10,7 +10,8 @@ This is a streamlined version of VideoMAEv2, containing only the essential compo
 
 ```
 ADH-ViT/
-├── run_alternating_hand_finetuning.py    # Main training script
+├── train.sh    # Example training script
+├── main.py    # Main training script
 ├── engine_for_alternating_finetuning.py  # Training/validation/test loops
 ├── engine_for_finetuning.py              # Helper functions (merge, etc.)
 ├── utils.py                               # Utilities (distributed training, logging)
@@ -20,7 +21,7 @@ ADH-ViT/
 │   ├── __init__.py                        # Model registry
 │   ├── modeling_finetune.py               # Base VisionTransformer
 │   ├── modeling_finetune_alternating.py   # Alternating dual-head ViT
-│   └── vit_b_k710_dl_from_giant.pth      # Pretrained weights
+│   └── vit_b_k710_dl_from_giant.pth      # Pretrained weights (download the weights from [official website](https://github.com/OpenGVLab/VideoMAEv2/blob/master/docs/MODEL_ZOO.md))
 │
 ├── dataset/
 │   ├── __init__.py
@@ -28,10 +29,6 @@ ADH-ViT/
 │   ├── datasets.py                        # RawFrameClsDataset, VideoClsDataset
 │   ├── loader.py                          # Data loader utilities
 │   └── [augmentation files]               # transforms, rand_augment, etc.
-│
-├── scripts/
-│   └── finetune/
-│       └── train_havid_alternating.sh    # Example training script
 │
 └── requirements.txt                       # Python dependencies
 ```
@@ -120,15 +117,7 @@ python run_alternating_hand_finetuning.py \
     --sampling_rate 4
 ```
 
-**For multi-GPU training:**
-
-```bash
-cd /home/hao/Polyphony/ADH-ViT
-
-torchrun --nproc_per_node=2 \
-    run_alternating_hand_finetuning.py \
-    [... same arguments as above ...]
-```
+**For multi-GPU training:
 
 ---
 
