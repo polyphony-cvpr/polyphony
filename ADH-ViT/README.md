@@ -1,8 +1,6 @@
 # ADH-ViT: Alternating Dual-Hand Vision Transformer
 
-**An implementation for alternating dual-hand video action recognition.**
-
-This is a streamlined version of VideoMAEv2, containing only the essential components needed for training alternating dual-hand action recognition models on the HA-ViD dataset.
+This is official implementation of ADH-ViT. It serves as a feature extractor in Polyphony, but it can also operate as a standalone dual-hand action recognition model. By blocking one stream, it can also work on single-stream action recognition tasks.
 
 ---
 
@@ -21,7 +19,7 @@ ADH-ViT/
 │   ├── __init__.py                        # Model registry
 │   ├── modeling_finetune.py               # Base VisionTransformer
 │   ├── modeling_finetune_alternating.py   # Alternating dual-head ViT
-│   └── vit_b_k710_dl_from_giant.pth      # Pretrained weights (download the weights from [official website](https://github.com/OpenGVLab/VideoMAEv2/blob/master/docs/MODEL_ZOO.md))
+│   └── vit_b_k710_dl_from_giant.pth      # Pretrained weights (download the weights from VideoMAE V2 official website)
 │
 ├── dataset/
 │   ├── __init__.py
@@ -40,7 +38,7 @@ ADH-ViT/
 ### 1. Install Dependencies
 
 ```bash
-cd /home/hao/Polyphony/ADH-ViT
+cd /path_to/ADH-ViT
 pip install -r requirements.txt
 ```
 
@@ -51,13 +49,13 @@ pip install -r requirements.txt
 - decord (for video loading)
 - einops
 
-### 2. Prepare HA-ViD Dataset
+### 2. Prepare Dataset
 
 Ensure your dataset follows this structure:
 
 ```
-/home/hao/Polyphony/data/havid_mmaction/
-├── lh_v0/                          # Left hand data
+/path_to/dataset
+├── lh_data/                          # Left hand data
 │   ├── train_list_video.txt
 │   ├── val_list_video.txt
 │   └── videos/
@@ -65,7 +63,7 @@ Ensure your dataset follows this structure:
 │       │   └── *.mp4
 │       ├── action2/
 │       └── ...
-└── rh_v0/                          # Right hand data
+└── rh_data/                          # Right hand data
     ├── train_list_video.txt
     ├── val_list_video.txt
     └── videos/
@@ -88,21 +86,19 @@ action2/video3.mp4 1
 **Option A: Use the provided script (recommended)**
 
 ```bash
-cd /home/hao/Polyphony/ADH-ViT
-bash scripts/finetune/train_havid_alternating.sh
+cd /path_to/ADH-ViT
+bash train.sh
 ```
 
 **Option B: Run directly with custom parameters**
 
 ```bash
-cd /home/hao/Polyphony/ADH-ViT
+cd /path_to/ADH-ViT
 
 python run_alternating_hand_finetuning.py \
     --model vit_base_patch16_224_alternating \
-    --lh_data_path /home/hao/Polyphony/data/havid_mmaction/lh_v0 \
-    --lh_data_root /home/hao/Polyphony/data/havid_mmaction/lh_v0 \
-    --rh_data_path /home/hao/Polyphony/data/havid_mmaction/rh_v0 \
-    --rh_data_root /home/hao/Polyphony/data/havid_mmaction/rh_v0 \
+    --lh_data_path /path_to/lh_data \
+    --rh_data_path /path_to/rh_data \
     --lh_num_classes 75 \
     --rh_num_classes 75 \
     --data_set HAVID \
@@ -116,9 +112,6 @@ python run_alternating_hand_finetuning.py \
     --num_frames 16 \
     --sampling_rate 4
 ```
-
-**For multi-GPU training:
-
 ---
 
 ## 🎯 Key Training Parameters
@@ -126,8 +119,8 @@ python run_alternating_hand_finetuning.py \
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `--alternation_steps` | 50 | Switch between left/right hand every N steps |
-| `--lh_num_classes` | 75 | Number of left-hand action classes |
-| `--rh_num_classes` | 75 | Number of right-hand action classes |
+| `--lh_num_classes` | 75 (on HA-ViD) | Number of left-hand action classes |
+| `--rh_num_classes` | 75 (on HA-ViD) | Number of right-hand action classes |
 | `--batch_size` | 4 | Batch size per GPU |
 | `--epochs` | 50 | Total training epochs |
 | `--lr` | 1e-3 | Learning rate |
@@ -144,6 +137,8 @@ python run_alternating_hand_finetuning.py \
 - `--alternation_steps 50`: Moderate switching (recommended)
 - `--alternation_steps 200`: Less frequent switching (faster but may favor one hand)
 
+**Single-steam action:**
+- `--one_stream`: Enable for single-stream training (only specify lh_data_path)
 ---
 
 ## 🏗️ Model Architecture
@@ -162,14 +157,13 @@ ViT Backbone (Shared)
     ┌───┴───┐
     ↓       ↓
 LH Head   RH Head
-(75 cls)  (75 cls)
 ```
 
 **Key Features:**
 - **Shared backbone**: Efficient feature extraction
 - **Dual heads**: Separate classification for each hand
 - **Alternating training**: Switch focus between hands every N steps
-- **Pretrained on Kinetics-710**: Strong initialization
+- **Pretrained backbone**: Strong initialization
 
 ---
 
@@ -192,18 +186,13 @@ This approach:
 
 ## 📈 Monitoring Training
 
-Training logs and checkpoints are saved to `output/havid_alternating_hands/`:
+Training logs and checkpoints are saved to `output/`:
 
 ```
-output/havid_alternating_hands/
+output/
 ├── checkpoint-{epoch}.pth       # Model checkpoints
 ├── log.txt                      # Training log
 └── events.out.tfevents.*       # TensorBoard logs
-```
-
-**View with TensorBoard:**
-```bash
-tensorboard --logdir output/havid_alternating_hands
 ```
 
 **Resume training:**
@@ -223,9 +212,9 @@ python run_alternating_hand_finetuning.py \
 ```bash
 python run_alternating_hand_finetuning.py \
     --eval \
-    --resume output/havid_alternating_hands/checkpoint-best.pth \
-    --lh_data_path /path/to/test/lh_data \
-    --rh_data_path /path/to/test/rh_data \
+    --resume /path_to/checkpoint-best.pth \
+    --lh_data_path /path_to/lh_data \
+    --rh_data_path /path_to/rh_data \
     [... other args ...]
 ```
 
@@ -233,78 +222,6 @@ python run_alternating_hand_finetuning.py \
 - Left-hand accuracy (Top-1, Top-5)
 - Right-hand accuracy (Top-1, Top-5)
 - Average accuracy across hands
-
----
-
-## 🔧 Troubleshooting
-
-### Issue: "FileNotFoundError: pretrained model not found"
-**Solution:** 
-```bash
-# Download the pretrained model
-cd ADH-ViT/models
-wget https://pjlab-gvm-data.oss-cn-shanghai.aliyuncs.com/internvideo/videomaev2/vit_b_k710_dl_from_giant.pth
-```
-
-### Issue: "CUDA out of memory"
-**Solution:** Reduce batch size or number of frames:
-```bash
---batch_size 2 --num_frames 8
-```
-
-### Issue: "decord not found"
-**Solution:** Install decord:
-```bash
-pip install decord
-```
-
-### Issue: Training is very slow
-**Solutions:**
-1. Increase `--num_workers` (e.g., 8 or 16)
-2. Use multiple GPUs with `torchrun --nproc_per_node=N`
-3. Reduce `--test_num_segment` and `--test_num_crop` during validation
-
-### Issue: One hand performs much better than the other
-**Solutions:**
-1. Decrease `--alternation_steps` (e.g., from 50 to 25)
-2. Check dataset balance (both hands should have similar amounts of data)
-3. Adjust learning rate separately for each head (requires code modification)
-
----
-
-## 📝 Citation
-
-If you use ADH-ViT in your research, please cite:
-
-```bibtex
-@article{videomaev2,
-  title={VideoMAE V2: Scaling Video Masked Autoencoders with Dual Masking},
-  author={Wang, Limin and Huang, Bingkun and Zhao, Zhiyu and Tong, Zhan and He, Yinan and Wang, Yi and Wang, Yali and Qiao, Yu},
-  journal={arXiv preprint arXiv:2303.16727},
-  year={2023}
-}
-```
-
----
-
-## 🔗 Related Projects
-
-- **Original VideoMAEv2**: [OpenGVLab/VideoMAEv2](https://github.com/OpenGVLab/VideoMAEv2)
-- **HA-ViD Dataset**: [Hand Action Video Dataset](https://github.com/ivalab/HandandObject)
-
----
-
-## 📄 License
-
-This project is released under the Apache 2.0 license. See [LICENSE](LICENSE) for details.
-
----
-
-## 🙏 Acknowledgments
-
-This is a cleaned and focused version of VideoMAEv2, streamlined specifically for alternating dual-hand training. We thank the original VideoMAEv2 authors for their excellent work.
-
-**Cleaned from**: 166 files → 24 files (86% reduction)
 
 ---
 
@@ -319,13 +236,6 @@ This is a cleaned and focused version of VideoMAEv2, streamlined specifically fo
 
 ---
 
-For more details, see:
-- `QUICK_START.txt` - Quick reference guide
-- `CLEANUP_SUMMARY.md` - What was removed from VideoMAEv2
-- `scripts/finetune/train_havid_alternating.sh` - Example training script
+## 🙏 Acknowledgments
 
-**Questions?** Check the original VideoMAEv2 documentation or open an issue.
-
----
-
-**Happy Training! 🚀**
+ADH-ViT is built on [VideoMAEv2](https://github.com/OpenGVLab/VideoMAEv2). We thank the original VideoMAEv2 authors for their excellent work.

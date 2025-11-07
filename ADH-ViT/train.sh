@@ -44,7 +44,6 @@ torchrun --nproc_per_node=1 \
     --test_num_segment 5 \
     --test_num_crop 3 \
     --alternation_steps 50 \ 
-    ##Try different values: 10 (very frequent), 50 (moderate), 200 (less frequent)
     --dist_eval
     # --one_stream # Enable for single-stream training (only specify lh_data_path)
 
