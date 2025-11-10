@@ -31,28 +31,6 @@ semantic_conditioning/
 └── enhanced_features/   # Enhanced visual features (created during training)
 ```
 
-## Installation
-
-### 1. Create a Conda Environment
-
-```bash
-conda create -n semantic python=3.9
-conda activate semantic
-```
-
-### 2. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-Or manually install:
-```bash
-pip install torch torchvision torchaudio
-pip install transformers
-pip install numpy matplotlib seaborn scikit-learn
-```
-
 ## Usage
 
 ### Quick Start
@@ -71,16 +49,6 @@ Edit `config.py` to customize:
 - Training hyperparameters
 - Loss function type
 - Semantic embedding model
-
-Example modifications:
-
-```python
-# In config.py
-TCN_HIDDEN_DIMS = [640, 512, 384]  # Larger model
-BATCH_SIZE = 8  # Larger batch
-LEARNING_RATE = 5e-4  # Different learning rate
-LOSS_TYPE = 'smooth_l1'  # Different loss
-```
 
 ### Training
 
@@ -157,17 +125,6 @@ The evaluator computes:
   - Null/transition states
   - Wrong actions
 
-Example output:
-```
-Alignment Quality Results:
-  mse_loss: 0.123456
-  mean_cosine_similarity: 0.876543
-  median_cosine_similarity: 0.890123
-  actions_mean_similarity: 0.890234
-  null_mean_similarity: 0.856789
-  wrong_mean_similarity: 0.834567
-```
-
 ## Data Format
 
 ### Input Requirements
@@ -191,9 +148,9 @@ Alignment Quality Results:
    - Format: `<label> "<description>"`
    - Example:
      ```
-     action_1 "pick up the cup"
-     action_2 "pour water"
-     null "no action or transition"
+      ibacb "insert the ball into the cylinder base"
+      ibscb "insert the ball seat into the cylinder base"
+      ......
      ```
 
 4. **Split Files** (e.g., `train.split1.bundle`)
@@ -205,8 +162,8 @@ Alignment Quality Results:
      video_003
      ```
 
-5. **Semantic Embeddings** (`.pt` file, optional but recommended)
-   - Precomputed embeddings for all action labels
+5. **Semantic Embeddings** (`.pt` file)
+   - Precomputed embeddings for all action labels (see [Precompute Semantic Embeddings](../data_preparation/README.md#2-precompute-semantic-embeddings))
    - Format: `{'embeddings': {label: tensor, ...}}`
 
 ### Output Format
@@ -215,60 +172,59 @@ Enhanced features are saved as `.npy` files:
 - Shape: `(feature_dim, seq_len)` - transposed for downstream compatibility
 - Typical dimension: 384 (MiniLM semantic dim)
 
-## Advanced Usage
 
-### Using Different Semantic Models
+## Concatenate Features
+Concatenate the ADH-ViT features with the semantic conditioned features to form the MAS features.
 
-To use a different semantic model (e.g., MPNet):
+The `concatenate_features.py` script performs a two-step concatenation:
 
-1. Update `config.py`:
-```python
-SEMANTIC_MODEL_NAME = 'sentence-transformers/all-mpnet-base-v2'
-SEMANTIC_DIM = 768  # MPNet dimension
-SEMANTIC_EMBEDDINGS_PATH = None  # Or path to precomputed embeddings
+1. **Step 1**: Shared visual features + Hand-specific features → Intermediate features
+   - LH: `shared [768, T] + lh [num_class, T] = intermediate [768+num_class, T]`
+   - RH: `shared [768, T] + rh [num_class, T] = intermediate [768+num_class, T]`
+
+2. **Step 2**: Intermediate features + Semantic features → Final features
+   - LH: `intermediate [768+num_class, T] + semantic [D_sem, T] = final [768+num_class+D_sem, T]`
+   - RH: `intermediate [768+num_class, T] + semantic [D_sem, T] = final [768+num_class+D_sem, T]`
+
+#### Usage
+
+**Basic usage** (with semantic features):
+
+```bash
+python concatenate_features_with_semantic.py \
+    --base_dir /path/to/features \
+    --semantic_lh_dir /path/to/semantic/lh \
+    --semantic_rh_dir /path/to/semantic/rh \
+    --output_dir /path/to/output
 ```
 
-2. If using precomputed embeddings, generate them first:
-```python
-from transformers import AutoTokenizer, AutoModel
-import torch
+#### Input Directory Structure
 
-model_name = 'sentence-transformers/all-mpnet-base-v2'
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModel.from_pretrained(model_name)
-
-# Generate embeddings for your action descriptions
-# ... (similar to the semantic embedding generation script)
+```
+base_dir/
+├── shared_features/      # Shared visual features [768, T]
+│   ├── video1.npy
+│   └── ...
+├── lh_features/          # Left-hand specific features [num_class, T]
+│   ├── video1.npy
+│   └── ...
+└── rh_features/          # Right-hand specific features [num_class, T]
+    ├── video1.npy
+    └── ...
 ```
 
-### Training on Different Datasets
+#### Output Directory Structure
 
-To adapt for a different dataset:
-
-1. Update paths in `config.py`
-2. Ensure your action mapping file follows the format
-3. Verify visual feature dimensions match `VISUAL_DIM`
-
-### Resuming Training
-
-To resume from a checkpoint:
-
-```python
-# In main.py, after model initialization:
-checkpoint = torch.load('./checkpoints/checkpoint_epoch_40.pth')
-model.load_state_dict(checkpoint['model_state_dict'])
-trainer.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-start_epoch = checkpoint['epoch'] + 1
 ```
-
-## Integration with Downstream Tasks
-
-The enhanced features can be directly used with action segmentation models:
-
-```python
-# In your action segmentation script
-enhanced_features = np.load('enhanced_features/video_001.npy')
-# Shape: (384, seq_len) - ready for segmentation model input
+output_dir/
+├── lh_v0/               # Final LH concatenated features
+│   ├── video1.npy       # [768+num_class+D_sem, T]
+│   └── ...
+├── rh_v0/               # Final RH concatenated features
+│   ├── video1.npy       # [768+num_class+D_sem, T]
+│   └── ...
+└── metadata/            # Processing metadata
+    └── concatenation_summary.json
 ```
 
 ## Contact

@@ -30,34 +30,49 @@ data/dataset/
 │   ├── video1.mp4
 │   ├── video2.mp4
 │   └── ...
-├── features/                    # Original I3D features (.npy)
-│   ├── feature1.mp4
-│   ├── feature2.mp4
-│   └── ...
-├── groundTruth/               # Frame-wise annotations (.txt)
-│   ├── video1.txt
-│   ├── video2.txt
-│   └── ...
+├── features                    # Original I3D features (.npy)
+|   ├── left_hand
+|   │   ├── video1.mp4
+|   │   ├── video2.mp4
+|   │   └── ...
+|   ├── right_hand
+|   │   ├── video1.mp4
+|   │   ├── video2.mp4
+|   │   └── ...
+├── groundTruth               # Frame-wise annotations (.txt)
+|   ├── left_hand
+|   │   ├── video1.txt
+|   │   ├── video1.txt
+|   │   └── ...
+|   ├── right_hand
+|   │   ├── video1.txt
+|   │   ├── video1.txt
+|   │   └── ...
 ├── mapping.txt                # Label to ID mapping
 │   # Format: "0 label1" or "label1 0"
 ├── splits/                    # Train/test splits
-│   ├── train.split1.bundle
-│   ├── test.split1.bundle
-│   └── ...
-└── havid_description.txt      # Action descriptions for semantic embeddings (stored in folder ./action_descriptions)
+|   ├── left_hand
+|   │   ├── train.split1.bundle
+|   │   └── test.split1.bundle
+|   ├── right_hand
+|   │   ├── train.split1.bundle
+|   │   └── test.split1.bundle
+└── description.txt      # Action descriptions for semantic embeddings (stored in folder ./action_descriptions)
 ```
+
+For description files, they can be found in the folder `action_descriptions`.
 
 ### Next Steps
 
 After preparing your dataset:
-1. **Generate action recognition dataset** (see [Script 1](#1-generate-action-recognition-dataset))
+1. **Generate data for training ADH-ViT** (see [Script 1](#1-generate-action-recognition-dataset))
 2. **Precompute semantic embeddings** (see [Script 2](#2-precompute-semantic-embeddings)) 
 
 ---
 
 ## Scripts
 
-### 1. Generate Action Recognition Dataset
+### 1. Generate data for training ADH-ViT
 
 Extract video clips from action segmentation datasets and prepare them for training ADH-ViT.
 
@@ -124,128 +139,41 @@ python prepare_dataset_for_ADH-ViT.py \
 - `--clip_length`: Length of each clip in frames (default: 16)
 - `--prefer_non_null`: Prefer clips with non-null labels (default: True)
 
-#### Input Format
-
-**Video Directory**: Contains `.mp4` video files
-
-**Annotation Directory**: Contains `.txt` annotation files (one per video)
-
-**Annotation Format** (frame-wise labels):
-```
-label1
-label1
-label2
-label2
-label2
-...
-```
-
-Or space-separated:
-```
-label1 label1 label2 label2 label2 ...
-```
-
-**Mapping File** (`mapping.txt`):
-```
-0 label1
-1 label2
-2 label3
-```
-
-Or:
-```
-label1 0
-label2 1
-label3 2
-```
-
-**Split List** (bundle file):
-```
-video1.txt
-video2.txt
-video3.txt
-```
-
 #### Output Format
 
 **Directory Structure:**
+
 ```
 output_dir/
-├── label1/
-│   ├── video1_label1_0.mp4
-│   ├── video1_label1_1.mp4
-│   └── ...
-├── label2/
-│   ├── video2_label2_0.mp4
-│   └── ...
-└── ...
+├── left_hand/
+|   ├── video_train/
+|   │   ├── label1/
+|   │   |   ├── label1_0.mp4
+|   │   |   ├── label1_1.mp4
+|   │   |   └── ...
+|   |   └── ...
+|   ├── video_val/
+|   │   ├── label1/
+|   │   |   ├── label1_0.mp4
+|   │   |   ├── label1_1.mp4
+|   │   |   └── ...
+|   |   └── ...
+|   ├── train_list_video.txt
+|   └── val_list_video.txt
+├── right_hand/
+|   ├── video_train/
+|   ├── video_val/
+|   ├── train_list_video.txt
+|   └── val_list_video.txt
 ```
 
 **Index File** (`train_list_video.txt`):
 ```
-label1/video1_label1_0.mp4 0
-label1/video1_label1_1.mp4 0
-label2/video2_label2_0.mp4 1
+label1/label1_0.mp4 0
+label1/label1_1.mp4 0
+label2/label2_0.mp4 1
 ...
 ```
-
-Format: `{relative_path} {numeric_label_id}`
-
-#### Examples
-
-**Example 1: Assembly101 Dataset (Segment-based)**
-
-```bash
-python prepare_dataset_for_ADH-ViT.py \
-    --video_dir /data/Assembly101/videos \
-    --annotation_dir /data/Assembly101/groundTruth \
-    --output_dir /data/Assembly101/action_recognition/videos_train \
-    --mapping_file /data/Assembly101/mapping.txt \
-    --extraction_method segment \
-    --min_segment_length 5 \
-    --split_list /data/Assembly101/splits/train.split1.bundle
-```
-
-**Example 2: HAVID Dataset (Clip-based)**
-
-```bash
-python prepare_dataset_for_ADH-ViT.py \
-    --video_dir /data/havid/videos \
-    --annotation_dir /data/havid/groundTruth \
-    --output_dir /data/havid/action_recognition/videos_train \
-    --mapping_file /data/havid/mapping.txt \
-    --extraction_method random \
-    --clips_per_video 15 \
-    --clip_length 32 \
-    --prefer_non_null \
-    --split_list /data/havid/splits/train.split1.bundle
-```
-
-#### Statistics Output
-
-After processing, the script prints:
-- Total number of clips extracted
-- Number of action classes
-- Clips per class distribution
-- Output directory and index file paths
-
-#### Tips
-
-1. **Segment-based** is better for:
-   - Preserving complete action boundaries
-   - Datasets with well-defined segments
-   - When you need full action context
-
-2. **Random clip-based** is better for:
-   - Creating balanced training sets
-   - Data augmentation
-   - When you need fixed-length clips
-
-3. **Class Balancing**: Random extraction automatically balances classes by favoring underrepresented labels
-
-4. **Null Labels**: Use `--prefer_non_null` to avoid extracting clips with null/background labels
-
----
 
 ### 2. Precompute Semantic Embeddings
 
@@ -289,17 +217,9 @@ python precompute_semantic_embeddings.py \
     --output_path /path/to/output/embeddings.pt
 ```
 
-#### Supported Models
-
-| Model | Dimension | Speed | Quality |
-|-------|-----------|-------|---------|
-| `sentence-transformers/all-mpnet-base-v2` (default) | 768 | Medium | High |
-| `sentence-transformers/all-MiniLM-L6-v2` | 384 | Fast | Good |
-| `BAAI/bge-large-en-v1.5` | 1024 | Slow | Highest |
-
 #### Input Format
 
-**Mapping File** (`action_mapping.txt`):
+**Mapping File** (`./action_descriptions/*_description.txt`):
 ```
 label1 "natural language description 1"
 label2 "natural language description 2"
@@ -308,8 +228,8 @@ label2 "natural language description 2"
 
 **Example** (HAVID dataset):
 ```
-pour_liquid_into_cup "Pour the liquid into cup"
-cut_bread_using_knife "Cut bread using knife"
+ibacb "insert the ball into the cylinder base"
+ibscb "insert the ball seat into the cylinder base"
 ```
 
 #### Output Format
@@ -336,33 +256,17 @@ cut_bread_using_knife "Cut bread using knife"
 
 The script converts natural language descriptions to structured format:
 
-**Input**: `"Pour liquid into cup using spoon"`
+**Input**: `"insert the ball into the cylinder base"`
 
 **Output**: 
 ```
-The action is to pour. 
-The manipulated object is liquid. 
-The target object is cup. 
-The tool used is spoon.
+The action is insert. 
+The manipulated object is ball. 
+The target object is cylinder base. 
+The tool used is null.
 ```
 
 This structured format improves semantic embedding quality by explicitly identifying action components.
-
-## Requirements
-
-Install dependencies:
-
-```bash
-pip install torch transformers
-```
-
-Or use the requirements file:
-
-```bash
-pip install -r requirements.txt
-```
-
-## Examples
 
 ### Example 1: HAVID Dataset
 
@@ -370,121 +274,13 @@ pip install -r requirements.txt
 python precompute_semantic_embeddings.py \
     --data_root /data/havid \
     --mapping_file havid_description.txt \
-    --semantic_model_name sentence-transformers/all-mpnet-base-v2
-```
-
-**Output**: `/data/havid/semantic_embeddings/sentence-transformers_all-mpnet-base-v2.pt`
-
-### Example 2: Breakfast Dataset
-
-```bash
-python precompute_semantic_embeddings.py \
-    --data_root /data/breakfast \
-    --mapping_file mapping.txt \
     --semantic_model_name sentence-transformers/all-MiniLM-L6-v2
 ```
 
-**Output**: `/data/breakfast/semantic_embeddings/sentence-transformers_all-MiniLM-L6-v2.pt`
+**Output**: `/data/havid/semantic_embeddings/sentence-transformers_all-MiniLM-L6-v2.pt`
 
-### Example 3: Custom Output Location
-
-```bash
-python precompute_semantic_embeddings.py \
-    --data_root /data/my_dataset \
-    --mapping_file actions.txt \
-    --output_path /custom/path/my_embeddings.pt
-```
-
-## Loading Embeddings
-
-To use the precomputed embeddings in your code:
-
-```python
-import torch
-
-# Load embeddings
-embeddings_data = torch.load('path/to/embeddings.pt')
-
-# Access embeddings
-label_embeddings = embeddings_data['embeddings']
-meta_info = embeddings_data['meta']
-
-# Get embedding for a specific label
-label = 'pour_liquid_into_cup'
-embedding = label_embeddings[label]  # torch.Tensor of shape [D]
-
-print(f"Embedding dimension: {meta_info['embedding_dim']}")
-print(f"Number of labels: {meta_info['num_labels']}")
-```
-
-## Special Labels
-
-The script automatically handles special labels:
-
-- **`null`**: Transitional state with no active manipulation
-- **`w`**: Wrong or incorrect action
-
-These labels get predefined structured descriptions even if not in the mapping file.
-
-## Troubleshooting
-
-### Issue: Mapping file not found
-
-**Solution**: Ensure the mapping file exists and the path is correct:
-```bash
-ls /path/to/your/dataset/action_mapping.txt
-```
-
-### Issue: Model download fails
-
-**Solution**: Check internet connection or use a local model cache:
-```bash
-export TRANSFORMERS_CACHE=/path/to/cache
-```
-
-### Issue: Out of memory
-
-**Solution**: Use a smaller model:
-```bash
---semantic_model_name sentence-transformers/all-MiniLM-L6-v2
-```
-
-## Best Practices
-
-1. **Model Selection**:
-   - Use `all-mpnet-base-v2` for best quality (768-dim)
-   - Use `all-MiniLM-L6-v2` for faster processing (384-dim)
-   - Use `bge-large-en-v1.5` for highest quality (1024-dim, slower)
-
-2. **Batch Processing**:
-   - Process multiple datasets with a shell script:
-   ```bash
-   for dataset in havid breakfast 50salads; do
-       python precompute_semantic_embeddings.py \
-           --data_root /data/$dataset \
-           --mapping_file mapping.txt
-   done
-   ```
-
-3. **Version Control**:
-   - Keep track of which model was used
-   - Save embeddings with descriptive filenames
-   - Document embedding dimensions in your config
-
-## Citation
-
-If you use these tools in your research, please cite:
-
-```bibtex
-@inproceedings{your_paper,
-    title={Dual-Hand Action Segmentation with Semantic Conditioning},
-    author={Your Name},
-    booktitle={Conference},
-    year={2024}
-}
-```
 
 ## Contact
 
-For questions or issues, please open an issue on GitHub or contact [your email].
+For questions or issues, please open an issue on GitHub.
 
