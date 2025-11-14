@@ -27,7 +27,7 @@ Polyphony is a unified three-stage method for dual-hand action segmentation that
 **Performance Highlights:**
 - HA-ViD: 57.1% (LH) / 60.6% (RH) accuracy (+12.0 / +16.8 over previous SOTA)
 - ATTACH: 52.8% (LH) / 47.3% (RH) accuracy (+5.3 / +4.8 over previous SOTA)
-- Breakfast: 82.5% accuracy (outperforms 10× larger backbone, SOTA)
+- Breakfast: 82.5% accuracy (outperforms 12× larger backbone, SOTA)
 
 ---
 
