@@ -48,7 +48,7 @@ DECODER_PARAMS = {
 
 DIFFUSION_PARAMS = {
     'timesteps': 1000,             # Total diffusion timesteps
-    'sampling_timesteps': 25,      # DDIM sampling steps (< timesteps)
+    'sampling_timesteps': 5,      # DDIM sampling steps (< timesteps)
     'ddim_sampling_eta': 1.0,      # DDIM eta (0=deterministic, 1=stochastic)
     'snr_scale': 2.0,              # Signal-to-noise ratio scale
     'detach_decoder': False,       # Whether to detach encoder features
